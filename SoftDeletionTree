@@ -1,0 +1,386 @@
+import java.text.*;
+import java.util.*;
+
+//------------------------------------------------------
+public class SoftDeletionTree
+{ 
+   // -------  main --------------
+   public static void main(String[] args) throws Exception
+   {
+      FHsdTree<Integer> sceneTree = new FHsdTree<Integer>();
+      FHsdTreeNode<Integer> tn;
+      
+      // create a scene in a room
+      tn = sceneTree.addChild(null, 888);
+
+      // add three objects to the scene tree
+      sceneTree.addChild(tn, 777);
+      sceneTree.addChild(tn, 666);
+      sceneTree.addChild(tn, 999);
+      // add some parts to Miguel
+      tn = sceneTree.find(666);
+
+      // Miguel's left arm
+      tn = sceneTree.addChild(tn, 660);
+      tn = sceneTree.addChild(tn, 661);
+      tn =  sceneTree.addChild(tn, 662);
+      sceneTree.addChild(tn, 61);
+      sceneTree.addChild(tn, 62);
+      sceneTree.addChild(tn, 63);
+      sceneTree.addChild(tn, 64);
+      sceneTree.addChild(tn, 65);
+
+      // Miguel's right arm
+      tn = sceneTree.find(666);
+      tn = sceneTree.find(tn, 660, 0);
+      tn = sceneTree.addChild(tn, 663);
+      tn =  sceneTree.addChild(tn, 664);
+      sceneTree.addChild(tn, 60);
+      sceneTree.addChild(tn, 66);
+      sceneTree.addChild(tn, 67);
+      sceneTree.addChild(tn, 68);
+      sceneTree.addChild(tn, 69);
+
+      // add some parts to Lily
+      tn = sceneTree.find(777);
+      tn = sceneTree.addChild(tn, 770);
+      sceneTree.addChild(tn, 71);
+      sceneTree.addChild(tn, 72);
+      sceneTree.addChild(tn, 73);
+      sceneTree.addChild(tn, 74);
+      sceneTree.addChild(tn, 75);
+      sceneTree.addChild(tn, 76);
+
+      // add some parts to table
+      tn = sceneTree.find(999);
+      sceneTree.addChild(tn, 990);
+      sceneTree.addChild(tn, 991);
+      sceneTree.addChild(tn, 992);
+      sceneTree.addChild(tn, 993);
+      
+      //display size and tree of the original tree
+      System.out.println("The original size of tree is " + sceneTree.size());
+      System.out.println("The original tree is below-------------------------");
+      sceneTree.display();
+      System.out.println("The end of the orignal tree ----------------------\n");
+      
+      //soft deletion from virtual tree
+      sceneTree.remove(75);
+      sceneTree.remove(666);
+      sceneTree.remove(111);
+      
+      //display size and tree of the virtual tree after removed
+      System.out.println("The size of virtual tree after removed is " + sceneTree.size());
+      System.out.println("The virtual tree after removed is below---------------------");
+      sceneTree.display();
+      System.out.println("The end of the virtual tree after removed--------------------\n");
+      
+      //display size and tree of the physical tree after soft deletion
+      System.out.println("The size of physical tree is " + sceneTree.sizePhysical());
+      System.out.println("The physical tree after soft deletion is below---------------------");
+      sceneTree.displayPhysical();
+      System.out.println("The end of the physical tree after soft deletion--------------------\n");
+      
+      //collect garbage in the physical tree
+      sceneTree.collectGarbage();
+      
+      //display physical size and tree after collect garbage
+      System.out.println("The size of physical tree after collectGarbage is " + sceneTree.sizePhysical());
+      System.out.println("The physical tree after collectGarbage is below-------------------");
+      sceneTree.displayPhysical();
+      System.out.println("The end of the physical tree after collectGarbage-----------------");
+   }
+}
+
+class FHsdTree<E> implements Cloneable
+{
+	protected int mSize;
+	protected FHsdTreeNode<E> mRoot;
+
+	public FHsdTree()
+	{
+		clear();
+	}
+
+	public boolean empty()
+	{
+		return (mSize == 0);
+	}
+
+	public int sizePhysical()
+	{
+		return mSize;
+	}
+
+	public void clear()
+	{
+		mSize = 0;
+		mRoot = null;
+	}
+
+	public FHsdTreeNode<E> find(E x)
+	{
+		return find(mRoot, x, 0);
+	}
+
+	public boolean remove(E x)
+	{
+		return remove(mRoot, x);
+	}
+
+	public void display()
+	{
+		display(mRoot, 0);
+	}
+
+	public void displayPhysical()
+	{
+		displayPhysical(mRoot, 0);
+	}
+
+	public int size()
+	{
+		if (mSize == 0)
+			return 0;
+		return size(mRoot, 0);
+	}
+
+	protected int size(FHsdTreeNode<E> treeNode, int size)
+	{
+		FHsdTreeNode<E> child;
+		if (treeNode.deleted)
+			return size;
+		size++;
+		// recursive step done here
+		for (child = treeNode.firstChild; child != null; child = child.sib)
+			size = size(child, size);
+		return size;
+	}
+	
+	public FHsdTreeNode<E> addChild(FHsdTreeNode<E> treeNode, E x)
+	{
+		// empty tree? - create a root node if user passes in null
+		if (mSize == 0)
+		{
+			if (treeNode != null)
+				return null; // error something's fishy. treeNode can't right
+			mRoot = new FHsdTreeNode<E>(false, x, null, null, null);
+			mRoot.myRoot = mRoot;
+			mSize = 1;
+			return mRoot;
+		}
+		if (treeNode == null)
+			return null; // error inserting into non_null tree with a null parent
+		if (treeNode.myRoot != mRoot)
+			return null; // silent error, node does not belong to this tree
+
+		// push this node into the head of the sibling list; adjust prev pointers
+		FHsdTreeNode<E> newNode = new FHsdTreeNode<E>(false, x,
+				treeNode.firstChild, null, treeNode, mRoot); // sb, chld, prv, rt
+		treeNode.firstChild = newNode;
+		if (newNode.sib != null)
+			newNode.sib.prev = newNode;
+		++mSize;
+		return newNode;
+	}
+
+	public FHsdTreeNode<E> find(FHsdTreeNode<E> root, E x, int level)
+	{
+		FHsdTreeNode<E> retval;
+
+		if (mSize == 0 || root == null)
+			return null;
+
+		if (root.data.equals(x) && !root.deleted)
+			return root;
+
+		// otherwise, recurse. don't process sibs if this was the original call
+		if (level > 0 && (retval = find(root.sib, x, level)) != null)
+			return retval;
+		return find(root.firstChild, x, ++level);
+
+	}
+
+	public boolean remove(FHsdTreeNode<E> root, E x)
+	{
+		FHsdTreeNode<E> tn = null;
+
+		if (mSize == 0 || root == null)
+			return false;
+
+		if ((tn = find(root, x, 0)) != null)
+		{
+			removeNode(tn);
+			return true;
+		}
+		return false;
+	}
+
+	private void removeNode(FHsdTreeNode<E> nodeToDelete)
+	{
+		if (nodeToDelete == null || mRoot == null)
+			return;
+		if (nodeToDelete.myRoot != mRoot)
+			return; // silent error, node does not belong to this tree
+		nodeToDelete.deleted = true;
+	}
+
+	public void collectGarbage()
+	{
+		mSize = size();
+		collectGarbage(mRoot);
+	}
+
+	private void collectGarbage(FHsdTreeNode<E> root)
+	{
+		FHsdTreeNode<E> child;
+		if (root == null || mRoot == null)
+			return;
+
+		if (root.deleted)
+		{
+			if (root.prev == null)
+				mRoot = null; // last node in tree
+			else if (root.prev.sib == root)
+				root.prev.sib = root.sib; // adjust left sibling
+			else
+				root.prev.firstChild = root.sib; // adjust parent
+
+			// adjust the successor sib's prev pointer
+			if (root.sib != null)
+				root.sib.prev = root.prev;
+
+			return;
+		}
+
+		// remove all the children of this node
+		// (but for decrementing mSize, this loop might be unnecessary)
+		for (child = root.firstChild; child != null; child = child.sib)
+			collectGarbage(child);
+
+	}
+
+	public Object clone() throws CloneNotSupportedException
+	{
+		FHsdTree<E> newObject = (FHsdTree<E>) super.clone();
+		newObject.clear(); // can't point to other's data
+
+		newObject.mRoot = cloneSubtree(mRoot);
+		newObject.mSize = mSize;
+		newObject.setMyRoots(newObject.mRoot);
+
+		return newObject;
+	}
+
+	private FHsdTreeNode<E> cloneSubtree(FHsdTreeNode<E> root)
+	{
+		FHsdTreeNode<E> newNode;
+		if (root == null)
+			return null;
+
+		// does not set myRoot which must be done by caller
+		newNode = new FHsdTreeNode<E>(false, root.data, cloneSubtree(root.sib),
+				cloneSubtree(root.firstChild), null);
+
+		// the prev pointer is set by parent recursive call ... this is the code:
+		if (newNode.sib != null)
+			newNode.sib.prev = newNode;
+		if (newNode.firstChild != null)
+			newNode.firstChild.prev = newNode;
+		return newNode;
+	}
+
+	// recursively sets all myRoots to mRoot
+	private void setMyRoots(FHsdTreeNode<E> treeNode)
+	{
+		FHsdTreeNode<E> child;
+
+		if (mRoot == null)
+			return;
+
+		treeNode.myRoot = mRoot;
+		for (child = treeNode.firstChild; child != null; child = child.sib)
+			setMyRoots(child);
+	}
+
+	// define this as a static member so recursive display() does not need
+	// a local version
+	final static String blankString = "                                    ";
+
+	protected void displayPhysical(FHsdTreeNode<E> treeNode, int level)
+	{
+		FHsdTreeNode<E> child;
+		String indent;
+
+		if (treeNode == null)
+			return;
+
+		// stop runaway indentation/recursion
+		if (level > (int) blankString.length() - 1)
+		{
+			System.out.println(blankString + " ... ");
+			return;
+		}
+
+		indent = blankString.substring(0, level);
+
+		// pre-order processing done here ("visit")
+		System.out.print(indent + treeNode.data);
+
+		if (treeNode.deleted)
+			System.out.println(" ( D )");
+		else
+			System.out.println();
+
+		// recursive step done here
+		for (child = treeNode.firstChild; child != null; child = child.sib)
+			displayPhysical(child, level + 1);
+	}
+
+	protected void display(FHsdTreeNode<E> treeNode, int level)
+	{
+		FHsdTreeNode<E> child;
+		String indent;
+
+		if (treeNode == null)
+			return;
+
+		// stop runaway indentation/recursion
+		if (level > (int) blankString.length() - 1)
+		{
+			System.out.println(blankString + " ... ");
+			return;
+		}
+
+		indent = blankString.substring(0, level);
+
+		if (treeNode.deleted)
+			return;
+
+		// pre-order processing done here ("visit")
+		System.out.println(indent + treeNode.data);
+
+		// recursive step done here
+		for (child = treeNode.firstChild; child != null; child = child.sib)
+			display(child, level + 1);
+	}
+
+	public <F extends TraverserG<? super E>> void traverse(F func)
+	{
+		traverse(func, mRoot);
+	}
+
+	protected <F extends TraverserG<? super E>>
+	// public <F extends TraverserG<E>> // also works but less flexibly
+	void traverse(F func, FHsdTreeNode<E> treeNode)
+	{
+		FHsdTreeNode<E> child;
+		if (treeNode == null)
+			return;
+
+		func.visit(treeNode.data);
+
+		for (child = treeNode.firstChild; child != null; child = child.sib)
+			traverse(func, child);
+	}
+}
