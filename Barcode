@@ -1,0 +1,444 @@
+public class Barcode
+{
+   public static void main(String[] args)
+   {
+      String[] sImageIn = 
+         { 
+            "                                      ",
+            "                                      ",
+            "                                      ",
+            "* * * * * * * * * * * * * * * * *     ",
+            "*                                *    ",
+            "**** * ****** ** ****** *** ****      ",
+            "* ********************************    ",
+            "*    *   *  * *  *   *  *   *  *      ",
+            "* **    *      *   **    *       *    ",
+            "****** ** *** **  ***** * * *         ",
+            "* ***  ****    * *  **        ** *    ",
+            "* * *   * **   *  *** *   *  * **     ",
+            "**********************************    "
+         };
+
+      String[] sImageIn_2 = 
+         { 
+            "                                          ",
+            "                                          ",
+            "* * * * * * * * * * * * * * * * * * *     ",
+            "*                                    *    ",
+            "**** *** **   ***** ****   *********      ",
+            "* ************ ************ **********    ",
+            "** *      *    *  * * *         * *       ",
+            "***   *  *           * **    *      **    ",
+            "* ** * *  *   * * * **  *   ***   ***     ",
+            "* *           **    *****  *   **   **    ",
+            "****  *  * *  * **  ** *   ** *  * *      ",
+            "**************************************    "
+         };
+
+      BarcodeImage bc = new BarcodeImage(sImageIn);
+      DataMatrix dm = new DataMatrix(bc);
+
+      // First secret message
+      dm.translateImageToText();
+      dm.displayTextToConsole();
+      dm.displayImageToConsole();
+
+      // second secret message
+      bc = new BarcodeImage(sImageIn_2);
+      dm.scan(bc);
+      dm.translateImageToText();
+      dm.displayTextToConsole();
+      dm.displayImageToConsole();
+
+      // create your own message
+      dm.readText("CS 1B rocks more than Zeppelin");
+      dm.generateImageFromText();
+      dm.displayTextToConsole();
+      dm.displayImageToConsole();
+   }
+}
+
+//interface for class DataMatrix use
+interface BardodeIO
+{
+   public boolean scan(BarcodeImage bc);
+
+   public boolean readText(String text);
+
+   public boolean generateImageFromText();
+
+   public boolean translateImageToText();
+
+   public void displayTextToConsole();
+
+   public void displayImageToConsole();
+}
+
+//class BarcodeImage for class DataMatrix use
+class BarcodeImage implements Cloneable
+{
+   //class data
+   public static final int MAX_HEIGHT = 30;
+   public static final int MAX_WIDTH = 65;
+   private boolean[][] image_data;
+
+   //Default Constructor
+   public BarcodeImage()
+   {
+      int row, col;
+
+      //build empty 2D array
+      image_data = new boolean[MAX_HEIGHT][MAX_WIDTH];
+
+      //initialize 2D array
+      for (row = 0; row < MAX_HEIGHT; row++)
+      {
+         for (col = 0; col < MAX_WIDTH; col++)
+         {
+            image_data[row][col] = false;
+         }
+      }
+   }
+
+   //Constructor that take 1D array of Strings
+   public BarcodeImage(String[] str_data)
+   {
+      //call Default Constructor
+      this();
+      boolean temp = false;
+
+      //check 1D String array
+      if (!checkSize(str_data))
+         return;
+
+      //put 1D array into 2D array
+      for (int i = 0; i < str_data.length; i++)
+      {
+         for (int k = 0; k < str_data[i].length(); k++)
+         {
+            if (str_data[i].charAt(k) == ' ')
+               temp = false;
+            if (str_data[i].charAt(k) == '*')
+               temp = true;
+            image_data[MAX_HEIGHT - str_data.length + i][k] = temp;
+         }
+      }
+
+   }
+
+   //mutator for setPixel
+   public boolean setPixel(int row, int col, boolean value)
+   {
+      if (row < 0 || col < 0 || row > MAX_HEIGHT || col > MAX_WIDTH)
+         return false;
+      image_data[row][col] = value;
+      return true;
+   }
+
+   //Accessor for getPixel
+   public boolean getPixel(int row, int col)
+   {
+      if (row < 0 || row >= MAX_HEIGHT || col < 0 || col >= MAX_WIDTH)
+         return false;
+      return image_data[row][col];
+   }
+
+   //checking the incoming data, Bigger or null is not ok
+   private boolean checkSize(String[] image_data)
+   {
+      if (image_data == null)
+         return false;
+      if (image_data[0].length() >= MAX_WIDTH
+            || image_data.length >= MAX_HEIGHT)
+         return false;
+      return true;
+   }
+
+   //overrides the method of that name in Cloneable interface
+   public Object clone() throws CloneNotSupportedException
+   {
+      int row, col;
+
+      // always do this first - parent will clone its data correctly
+      BarcodeImage newBc = (BarcodeImage) super.clone();
+
+      // now do the immediate class member objects
+      newBc.image_data = new boolean[MAX_HEIGHT][MAX_WIDTH];
+      for (row = 0; row < MAX_HEIGHT; row++)
+         for (col = 0; col < MAX_WIDTH; col++)
+            newBc.image_data[row][col] = this.image_data[row][col];
+
+      return newBc;
+   }
+
+   //display to console
+   public void displayToConsole()
+   {
+      int row, col;
+      char temp = ' ';
+
+      // top row border
+      System.out.println();
+      for (col = 0; col < BarcodeImage.MAX_WIDTH + 2; col++)
+         System.out.print("-");
+      System.out.println();
+
+      // body
+      for (row = 0; row < BarcodeImage.MAX_HEIGHT; row++)
+      {
+         System.out.print("|");
+         for (col = 0; col < BarcodeImage.MAX_WIDTH; col++)
+         {
+            if (image_data[row][col] == false)
+               temp = ' ';
+            if (image_data[row][col] == true)
+               temp = '*';
+            System.out.print(temp);
+         }
+
+         System.out.println("|");
+      }
+
+      // bottom
+      for (col = 0; col < BarcodeImage.MAX_WIDTH + 2; col++)
+         System.out.print("-");
+      System.out.println();
+   }
+}
+
+//class DataMatrix
+class DataMatrix implements BardodeIO
+{
+   //class data
+   public static final char BLACK_CHAR = '*';
+   public static final char WHITE_CHAR = ' ';
+   private BarcodeImage image;
+   private String text;
+   private int actualWidth, actualHeight;
+
+   //constructor that set all data default
+   DataMatrix()
+   {
+      image = new BarcodeImage();
+      text = "default_text";
+      actualWidth = actualHeight = 0;
+   }
+
+   //constructor that sets the image but leaves the text at its default value
+   DataMatrix(BarcodeImage image)
+   {
+      this();
+      scan(image);
+   }
+
+   //constructor that sets the text but leaves the image at its default value
+   DataMatrix(String text)
+   {
+      this();
+      readText(text);
+   }
+
+   //mutator for image
+   public boolean scan(BarcodeImage image)
+   {
+      if (image == null)
+         return false;
+
+      try
+      {
+         this.image = (BarcodeImage) image.clone();
+      } catch (CloneNotSupportedException e){}
+
+      actualHeight = computeSignalHeight();
+      actualWidth = computeSignalWidth();
+
+      return true;
+   }
+
+   //read text
+   public boolean readText(String text)
+   {
+      if (text == null)
+         return false;
+      this.text = text;
+      return true;
+   }
+
+   //generate Image From Text
+   public boolean generateImageFromText()
+   {
+      actualHeight = 10;
+      actualWidth = text.length() + 2;
+      for (int i = 0; i < actualWidth; i++)
+      {
+         if (i % 2 == 1)
+            image.setPixel(BarcodeImage.MAX_HEIGHT - actualHeight, i, true);
+         else
+            image.setPixel(BarcodeImage.MAX_HEIGHT - actualHeight, i, false);
+
+         image.setPixel(BarcodeImage.MAX_HEIGHT - 1, i, true);
+      }
+
+      for (int i = 0; i < actualHeight; i++)
+      {
+         if (i % 2 == 1)
+            image.setPixel(BarcodeImage.MAX_HEIGHT - actualHeight + i,
+                  actualWidth - 1, true);
+         else
+            image.setPixel(BarcodeImage.MAX_HEIGHT - actualHeight + i,
+                  actualWidth - 1, false);
+
+         image.setPixel(BarcodeImage.MAX_HEIGHT - actualHeight + i, 0, true);
+      }
+
+      for (int i = 0; i < text.length(); i++)
+      {
+         WriteCharToCol(i + 1, text.charAt(i));
+      }
+
+      return true;
+   }
+
+   //helper method for generateImageFromText
+   private boolean WriteCharToCol(int col, int code)
+   {
+      if( col < 0 || col >= BarcodeImage.MAX_WIDTH )
+         return false;
+      
+      String str = "";
+      int i = 0;
+
+      str = Integer.toBinaryString(code);
+      str = "00000000" + str;
+      int length = str.length();
+      str = str.substring(length - 8, length);
+
+      for (int row = BarcodeImage.MAX_HEIGHT - actualHeight + 1;
+            row < BarcodeImage.MAX_HEIGHT - 1; row++)
+      {
+         if (str.charAt(i++) == '0')
+         {
+            image.setPixel(row, col, false);
+         } else
+            image.setPixel(row, col, true);
+      }
+
+      return true;
+   }
+
+   //translate Image To Text
+   public boolean translateImageToText()
+   {
+      if (actualWidth == 0 || actualHeight == 0)
+      {
+         return false;
+      }
+
+      text = "";
+      for (int col = 1; col < actualWidth - 1; col++)
+      {
+         text += readCharFromCol(col);
+      }
+
+      return true;
+   }
+
+   //helper method for translateImageToText
+   private char readCharFromCol(int col)
+   {
+      int temp, allTemp = 0;
+      int i = 7;
+
+      for (int row = BarcodeImage.MAX_HEIGHT - actualHeight + 1; 
+            row < BarcodeImage.MAX_HEIGHT - 1; row++)
+      {
+         if (!image.getPixel(row, col))
+            temp = 0;
+         else
+            temp = 1;
+         allTemp += (temp * Math.pow(2, i--));
+      }
+      return (char)allTemp;
+   }
+
+   //display Text To Console
+   public void displayTextToConsole()
+   {
+      System.out.println(text);
+   }
+
+   //display Image To Console
+   public void displayImageToConsole()
+   {
+      int row, col;
+      char temp = ' ';
+
+      // top row border
+      System.out.println();
+      for (col = 0; col < actualWidth + 2; col++)
+         System.out.print("-");
+      System.out.println();
+
+      // body
+      for (row = BarcodeImage.MAX_HEIGHT - actualHeight; 
+            row < BarcodeImage.MAX_HEIGHT; row++)
+      {
+         System.out.print("|");
+         for (col = 0; col < actualWidth; col++)
+         {
+            if (!image.getPixel(row, col))
+               temp = WHITE_CHAR;
+            else
+               temp = BLACK_CHAR;
+            System.out.print(temp);
+         }
+
+         System.out.println("|");
+      }
+
+      // bottom
+      for (col = 0; col < actualWidth + 2; col++)
+         System.out.print("-");
+      System.out.println();
+   }
+
+   //accessor for width
+   public int getActuralWidth()
+   {
+      return actualWidth;
+   }
+
+   //accessor for height
+   public int getActuralHeight()
+   {
+      return actualHeight;
+   }
+
+   //helper method for scan()
+   private int computeSignalWidth()
+   {
+      int k;
+      for (k = 0; k < BarcodeImage.MAX_WIDTH; k++)
+      {
+         if (!image.getPixel(BarcodeImage.MAX_HEIGHT - 1, k))
+         {
+            break;
+         }
+      }
+      return k;
+   }
+
+   //helper method for scan()
+   private int computeSignalHeight()
+   {
+      int i;
+      for (i = 0; i < BarcodeImage.MAX_HEIGHT; i++)
+      {
+         if (image.getPixel(i, 0))
+         {
+            break;
+         }
+      }
+      return BarcodeImage.MAX_HEIGHT - i;
+   }
+}
